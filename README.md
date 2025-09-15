@@ -6,14 +6,18 @@
 
 ## 📂 โครงสร้างโปรเจค
 
+```text
 backend/
-├── auth/ # Auth service
-│ ├── cmd/server # Main server ของ Auth service
-│ └── pkg # Logic ของระบบ Auth
-├── crud/ # CRUD service
-│ ├── cmd/server # Main server ของ CRUD service
-│ └── pkg # Logic ของ CRUD
-└── database/ # การเชื่อมต่อฐานข้อมูลและ migration
+├── auth/           # Auth service
+│   ├── cmd/server  # Main server ของ Auth service
+│   └── pkg         # Logic ของระบบ Auth
+├── crud/           # CRUD service
+│   ├── cmd/server  # Main server ของ CRUD service
+│   └── pkg         # Logic ของ CRUD
+└── database/       # การเชื่อมต่อฐานข้อมูลและ migration
+
+frontend/           # Frontend ของโปรเจค
+
 
 ---
 
