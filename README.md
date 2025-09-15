@@ -30,8 +30,8 @@ backend/
 ## 🚀 การติดตั้งและรันโปรเจค
 
 1. **Clone โปรเจค**
--git clone https://github.com/PvtTuang/crud.git
--cd crud
+- **git clone https://github.com/PvtTuang/crud.git
+- **cd crud
 
 2. สร้างไฟล์ .env
 # PostgreSQL
