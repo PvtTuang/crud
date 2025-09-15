@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres_service
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: Mtb
+      POSTGRES_PASSWORD: mtb456secret
+      POSTGRES_DB: postgres_app_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Mtb -d postgres_app_db"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:8.2
+    container_name: redis_service
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "mtb456secret", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+      start_period: 5s
+
+  auth:
+    build:
+      context: ./backend
+      dockerfile: auth/Dockerfile
+    container_name: auth_service
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend-network
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/health"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  crud:
+    build:
+      context: ./backend
+      dockerfile: crud/Dockerfile
+    container_name: crud_service
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    networks:
+      - backend-network
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8082/health"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_service
+    restart: unless-stopped
+    environment:
+      VITE_AUTH_API_URL: http://auth:8081
+      VITE_CRUD_API_URL: http://crud:8082
+    networks:
+      - backend-network
+    ports:
+      - "3000:80"
+    depends_on:
+      auth:
+        condition: service_healthy
+      crud:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  backend-network:
+    driver: bridge
