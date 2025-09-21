@@ -1,9 +1,13 @@
 package authentication
 
-import "gorm.io/gorm"
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type UserRepository interface {
 	Create(user *User) error
+	FindByID(id uuid.UUID) (*User, error)
 	FindByUsername(username string) (*User, error)
 	FindByEmail(email string) (*User, error)
 }
@@ -18,6 +22,14 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (r *userRepository) Create(user *User) error {
 	return r.db.Create(user).Error
+}
+
+func (r *userRepository) FindByID(id uuid.UUID) (*User, error) {
+	var user User
+	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (r *userRepository) FindByUsername(username string) (*User, error) {

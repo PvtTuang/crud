@@ -1,12 +1,16 @@
 package authentication
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
-	ID           uint   `gorm:"primaryKey"`
-	Username     string `gorm:"unique;not null"`
-	PasswordHash string `gorm:"not null"`
-	Email        string `gorm:"unique"`
+	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	Username     string    `gorm:"unique;not null"`
+	PasswordHash string    `gorm:"not null"`
+	Email        string    `gorm:"unique"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

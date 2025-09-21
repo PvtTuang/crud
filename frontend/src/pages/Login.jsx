@@ -13,10 +13,16 @@ const Login = () => {
         { username, password }
       );
 
+      // ✅ เก็บ token
       localStorage.setItem("token", res.data.token);
 
+      // ✅ ถ้ามี user_id จาก backend ให้เก็บด้วย
+      if (res.data.user_id) {
+        localStorage.setItem("user_id", res.data.user_id);
+      }
+
       alert("เข้าสู่ระบบสำเร็จ!");
-      window.location.href = "/products"; 
+      window.location.href = "/products";
     } catch (err) {
       alert("เข้าสู่ระบบไม่สำเร็จ: " + (err.response?.data?.error || err.message));
     }
@@ -48,8 +54,7 @@ const Login = () => {
       </form>
       <p>
         ยังไม่มีบัญชี? <a href="/register">สมัครสมาชิก</a>
-     </p>
-
+      </p>
     </div>
   );
 };

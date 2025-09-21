@@ -5,6 +5,7 @@ go 1.24.2
 require (
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.10.1
+	github.com/google/uuid v1.6.0
 	gorm.io/gorm v1.30.5
 )
 

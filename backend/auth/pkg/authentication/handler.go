@@ -50,11 +50,16 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.Login(req.Username, req.Password)
+	token, user, err := h.authService.Login(req.Username, req.Password)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"token": token})
+	ctx.JSON(http.StatusOK, gin.H{
+		"token":    token,
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	})
 }

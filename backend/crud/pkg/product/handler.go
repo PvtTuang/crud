@@ -1,10 +1,10 @@
-package pkg
+package product
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ProductHandler struct {
@@ -39,37 +39,63 @@ func (h *ProductHandler) GetAllProducts(ctx *gin.Context) {
 }
 
 func (h *ProductHandler) GetProductByID(ctx *gin.Context) {
-	id, _ := strconv.Atoi(ctx.Param("id"))
-	product, err := h.service.GetProductByID(uint(id))
+	id, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
 		return
 	}
+
+	product, err := h.service.GetProductByID(id)
+	if err != nil || product == nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, product)
 }
 
 func (h *ProductHandler) UpdateProduct(ctx *gin.Context) {
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		return
+	}
+
 	var product Product
 	if err := ctx.ShouldBindJSON(&product); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	product.ID = uint(id)
+	product.ID = id
 
 	if err := h.service.UpdateProduct(&product); err != nil {
+		if err.Error() == "product not found" {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	ctx.JSON(http.StatusOK, product)
 }
 
 func (h *ProductHandler) DeleteProduct(ctx *gin.Context) {
-	id, _ := strconv.Atoi(ctx.Param("id"))
-	if err := h.service.DeleteProduct(uint(id)); err != nil {
+	id, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		return
+	}
+
+	if err := h.service.DeleteProduct(id); err != nil {
+		if err.Error() == "product not found" {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	ctx.JSON(http.StatusOK, gin.H{"message": "Deleted"})
 }

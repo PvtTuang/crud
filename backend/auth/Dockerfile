@@ -1,4 +1,3 @@
-# ใช้ multi-stage build เพื่อลดขนาด image
 FROM golang:1.25-alpine AS builder
 
 WORKDIR /app

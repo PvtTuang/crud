@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,42 +40,43 @@ func (s *AuthService) Register(username, email, password string) (*User, error) 
 		PasswordHash: string(hash),
 	}
 
-	err = s.userRepo.Create(user)
-	if err != nil {
+	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func (s *AuthService) Login(username, password string) (string, error) {
+// ✅ return (token, user, error)
+func (s *AuthService) Login(username, password string) (string, *User, error) {
 	user, err := s.userRepo.FindByUsername(username)
 	if err != nil || user == nil {
-		return "", errors.New("username หรือ password ไม่ถูกต้อง")
+		return "", nil, errors.New("username หรือ password ไม่ถูกต้อง")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", errors.New("username หรือ password ไม่ถูกต้อง")
+		return "", nil, errors.New("username หรือ password ไม่ถูกต้อง")
 	}
 
+	// ใส่ user_id (UUID) ลง claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  user.ID,
+		"user_id":  user.ID.String(),
 		"username": user.Username,
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString(s.jwtKey)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	key := fmt.Sprintf("auth_token:%d", user.ID)
-	err = config.SetToken(s.redis, key, tokenString, 24*time.Hour)
-	if err != nil {
-		return "", err
+	// ✅ ใช้ UUID string แทน int
+	key := fmt.Sprintf("auth_token:%s", user.ID.String())
+	if err := config.SetToken(s.redis, key, tokenString, 24*time.Hour); err != nil {
+		return "", nil, err
 	}
 
-	return tokenString, nil
+	return tokenString, user, nil
 }
 
 func (s *AuthService) ValidateToken(tokenStr string) (bool, error) {
@@ -90,9 +92,18 @@ func (s *AuthService) ValidateToken(tokenStr string) (bool, error) {
 		return false, errors.New("ไม่สามารถอ่าน claims ได้")
 	}
 
-	userID := int(claims["user_id"].(float64))
-	key := fmt.Sprintf("auth_token:%d", userID)
+	// ✅ user_id เป็น string
+	userIDStr, ok := claims["user_id"].(string)
+	if !ok {
+		return false, errors.New("user_id ใน token ไม่ถูกต้อง")
+	}
 
+	// ตรวจสอบว่าเป็น UUID ที่ valid
+	if _, err := uuid.Parse(userIDStr); err != nil {
+		return false, errors.New("user_id ไม่ใช่ UUID")
+	}
+
+	key := fmt.Sprintf("auth_token:%s", userIDStr)
 	valid, err := config.IsTokenValid(s.redis, key, tokenStr)
 	if err != nil {
 		log.Println("Redis error:", err)
