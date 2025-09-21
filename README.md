@@ -80,7 +80,7 @@ Backend
 - ระบบเข้าสู่ระบบ (Login)
 - ระบบจัดการข้อมูล (CRUD) สำหรับแหล่งข้อมูลต่างๆ
 - เชื่อมต่อ PostgreSQL และ Redis
-Frontend
+- Frontend
 - หน้าจอสำหรับ Register/Login
 - หน้าจอ CRUD สำหรับผู้ใช้งาน
 - เชื่อมต่อ API กับ backend
