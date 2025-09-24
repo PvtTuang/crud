@@ -47,7 +47,6 @@ func (s *AuthService) Register(username, email, password string) (*User, error) 
 	return user, nil
 }
 
-// ✅ return (token, user, error)
 func (s *AuthService) Login(username, password string) (string, *User, error) {
 	user, err := s.userRepo.FindByUsername(username)
 	if err != nil || user == nil {
@@ -58,7 +57,6 @@ func (s *AuthService) Login(username, password string) (string, *User, error) {
 		return "", nil, errors.New("username หรือ password ไม่ถูกต้อง")
 	}
 
-	// ใส่ user_id (UUID) ลง claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":  user.ID.String(),
 		"username": user.Username,
@@ -69,8 +67,6 @@ func (s *AuthService) Login(username, password string) (string, *User, error) {
 	if err != nil {
 		return "", nil, err
 	}
-
-	// ✅ ใช้ UUID string แทน int
 	key := fmt.Sprintf("auth_token:%s", user.ID.String())
 	if err := config.SetToken(s.redis, key, tokenString, 24*time.Hour); err != nil {
 		return "", nil, err
@@ -92,13 +88,11 @@ func (s *AuthService) ValidateToken(tokenStr string) (bool, error) {
 		return false, errors.New("ไม่สามารถอ่าน claims ได้")
 	}
 
-	// ✅ user_id เป็น string
 	userIDStr, ok := claims["user_id"].(string)
 	if !ok {
 		return false, errors.New("user_id ใน token ไม่ถูกต้อง")
 	}
 
-	// ตรวจสอบว่าเป็น UUID ที่ valid
 	if _, err := uuid.Parse(userIDStr); err != nil {
 		return false, errors.New("user_id ไม่ใช่ UUID")
 	}

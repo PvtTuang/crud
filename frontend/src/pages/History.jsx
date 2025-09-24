@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; // ✅ ใช้ navigate
+import { useNavigate } from "react-router-dom";
 
 const History = () => {
   const [histories, setHistories] = useState([]);
@@ -8,7 +8,7 @@ const History = () => {
 
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("user_id");
-  const navigate = useNavigate(); // ✅ init navigate
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!token) {
@@ -18,7 +18,7 @@ const History = () => {
     fetchHistory();
   }, [token]);
 
-  // ดึงประวัติการสั่งซื้อ
+  // 📌 ดึงประวัติการสั่งซื้อ
   const fetchHistory = async () => {
     try {
       setLoading(true);
@@ -42,7 +42,6 @@ const History = () => {
       <div style={{ padding: "2rem" }}>
         <h2>📜 Purchase History</h2>
         <p>ยังไม่มีประวัติการสั่งซื้อ</p>
-        {/* ✅ ปุ่มกลับไป Products */}
         <button onClick={() => navigate("/products")}>⬅️ กลับไปหน้าสินค้า</button>
       </div>
     );
@@ -51,35 +50,43 @@ const History = () => {
   return (
     <div style={{ padding: "2rem" }}>
       <h2>📜 Purchase History</h2>
-      {histories.map((h) => (
-        <div
-          key={h.id}
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "1rem",
-            marginBottom: "1rem",
-          }}
-        >
-          <h4>🕒 {new Date(h.created_at).toLocaleString()}</h4>
-          <ul>
-            {h.items?.map((item) => (
-              <li key={item.id}>
-                {item.product?.name ?? item.product_id} — {item.quantity} ชิ้น
-                <span style={{ marginLeft: "0.5rem", color: "gray" }}>
-                  ({item.product?.price ?? "?"} ฿)
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      {histories.map((h) => {
+        // ✅ filter สินค้าที่ถูก soft delete
+        const items = h.items?.filter((item) => !item.product?.deleted_at) || [];
 
-      {/* ✅ ปุ่มกลับไป Products */}
-      <button
-        onClick={() => navigate("/products")}
-        style={{ marginTop: "1rem" }}
-      >
+        // ✅ รวมราคาสุทธิ
+        const total = items.reduce(
+          (sum, item) => sum + (item.product?.price ?? 0) * item.quantity,
+          0
+        );
+
+        return (
+          <div
+            key={h.id}
+            style={{
+              border: "1px solid #ccc",
+              borderRadius: "8px",
+              padding: "1rem",
+              marginBottom: "1rem",
+            }}
+          >
+            <h4>🕒 {new Date(h.created_at).toLocaleString()}</h4>
+            <ul>
+              {items.map((item) => (
+                <li key={item.id}>
+                  {item.product?.name ?? item.product_id} — {item.quantity} ชิ้น
+                  <span style={{ marginLeft: "0.5rem", color: "gray" }}>
+                    ({item.product?.price ?? "?"} ฿)
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p>💰 รวม: {total} ฿</p>
+          </div>
+        );
+      })}
+
+      <button onClick={() => navigate("/products")} style={{ marginTop: "1rem" }}>
         ⬅️ กลับไปหน้าสินค้า
       </button>
     </div>

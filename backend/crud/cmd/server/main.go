@@ -4,7 +4,6 @@ import (
 	"auth/middleware"
 	"auth/pkg/authentication"
 	"crud/pkg/cart"
-	"crud/pkg/history"
 	"crud/pkg/product"
 
 	"database/config"
@@ -20,13 +19,7 @@ func main() {
 	db := config.ConnectDB()
 
 	// migrate models
-	config.Migrate(db,
-		&product.Product{},
-		&cart.Cart{},
-		&cart.CartProduct{},
-		&history.PurchaseHistory{},
-		&history.PurchaseItem{},
-	)
+	config.Migrate(db)
 
 	// Product setup
 	productRepo := product.NewProductRepository(db)
@@ -39,9 +32,9 @@ func main() {
 	cartHandler := cart.NewCartHandler(cartService)
 
 	// History setup
-	historyRepo := history.NewHistoryRepository(db)
-	historyService := history.NewHistoryService(historyRepo)
-	historyHandler := history.NewHistoryHandler(historyService)
+	// historyRepo := history.NewHistoryRepository(db)
+	// historyService := history.NewHistoryService(historyRepo)
+	// historyHandler := history.NewHistoryHandler(historyService)
 
 	// Gin setup
 	r := gin.Default()
@@ -90,11 +83,11 @@ func main() {
 	}
 
 	// History routes
-	histories := r.Group("/history")
-	histories.Use(middleware.JWTMiddleware(authService))
-	{
-		histories.GET("/:user_id", historyHandler.GetByUser)
-	}
+	// histories := r.Group("/history")
+	// histories.Use(middleware.JWTMiddleware(authService))
+	// {
+	// 	histories.GET("/:user_id", historyHandler.GetByUser)
+	// }
 
 	// Run server
 	port := os.Getenv("CRUD_HTTP_PORT")

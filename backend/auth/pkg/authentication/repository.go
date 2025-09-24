@@ -1,8 +1,9 @@
 package authentication
 
 import (
+	"database/sql"
+
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type UserRepository interface {
@@ -13,37 +14,87 @@ type UserRepository interface {
 }
 
 type userRepository struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-func NewUserRepository(db *gorm.DB) UserRepository {
+func NewUserRepository(db *sql.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
 func (r *userRepository) Create(user *User) error {
-	return r.db.Create(user).Error
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	_, err = tx.Exec(`INSERT INTO users (username ,password_hash , email , created_at , updated_at )
+	 VALUES ($1, $2, $3, NOW(), NOW())`, user.Username, user.PasswordHash, user.Email,
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+
 }
 
 func (r *userRepository) FindByID(id uuid.UUID) (*User, error) {
 	var user User
-	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
+	tx, err := r.db.Begin()
+	if err != nil {
 		return nil, err
 	}
-	return &user, nil
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	row := tx.QueryRow(`SELECT id , username ,password_hash , email , created_at , updated_at FROM users WHERE id = $1`, id)
+	err = row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return &User{}, err
+	}
+	return &user, err
 }
 
 func (r *userRepository) FindByUsername(username string) (*User, error) {
 	var user User
-	if err := r.db.Where("username = ?", username).First(&user).Error; err != nil {
+	tx, err := r.db.Begin()
+	if err != nil {
 		return nil, err
 	}
-	return &user, nil
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	row := tx.QueryRow(`SELECT id , username ,password_hash , email , created_at , updated_at FROM users WHERE username = $1`, username)
+	err = row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return &User{}, err
+	}
+	return &user, err
 }
 
 func (r *userRepository) FindByEmail(email string) (*User, error) {
 	var user User
-	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+	tx, err := r.db.Begin()
+	if err != nil {
 		return nil, err
 	}
-	return &user, nil
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	row := tx.QueryRow(`SELECT id , username ,password_hash , email , created_at , updated_at FROM users WHERE email = $1`, email)
+	err = row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return &User{}, err
+	}
+	return &user, err
 }

@@ -14,11 +14,11 @@ import (
 func main() {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		log.Fatal("❌ JWT_SECRET ต้องถูกกำหนดใน .env")
+		log.Fatal("JWT_SECRET ต้องถูกกำหนดใน .env")
 	}
 
 	db := config.ConnectDB()
-	config.Migrate(db, &authentication.User{})
+	config.Migrate(db)
 	rdb := config.ConnectRedis()
 
 	userRepo := authentication.NewUserRepository(db)

@@ -13,7 +13,7 @@ const Products = () => {
   const [editPrice, setEditPrice] = useState("");
 
   const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("user_id"); // 👉 เก็บ user id ไว้หลัง login
+  const userId = localStorage.getItem("user_id");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const Products = () => {
     fetchProducts();
   }, [token]);
 
-  // ดึงสินค้า
+  // 📌 โหลดสินค้า
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -35,11 +35,14 @@ const Products = () => {
         }
       );
 
-      const mappedProducts = res.data.map((p) => ({
-        id: p.ID ?? p.id,
-        name: p.Name ?? p.name,
-        price: p.Price ?? p.price,
-      }));
+      // ✅ filter กันสินค้าที่ถูก soft delete
+      const mappedProducts = res.data
+        .filter((p) => !p.deleted_at)
+        .map((p) => ({
+          id: p.ID ?? p.id,
+          name: p.Name ?? p.name,
+          price: Number(p.Price ?? p.price),
+        }));
       setProducts(mappedProducts);
     } catch (err) {
       alert("โหลดสินค้าไม่สำเร็จ");
@@ -49,7 +52,7 @@ const Products = () => {
     }
   };
 
-  // เพิ่มสินค้าใหม่
+  // 📌 เพิ่มสินค้าใหม่
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name || !price) {
@@ -71,7 +74,7 @@ const Products = () => {
     }
   };
 
-  // ลบสินค้า
+  // 📌 ลบสินค้า (Optimistic update)
   const handleDelete = async (id) => {
     if (!window.confirm("คุณต้องการลบสินค้านี้หรือไม่?")) return;
 
@@ -80,14 +83,15 @@ const Products = () => {
         `${import.meta.env.VITE_CRUD_API_URL}/products/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchProducts();
+      // ✅ อัปเดต state ทันที
+      setProducts(products.filter((p) => p.id !== id));
     } catch (err) {
       alert("ลบสินค้าไม่สำเร็จ");
       console.error(err);
     }
   };
 
-  // เพิ่มสินค้าไป Cart
+  // 📌 เพิ่มสินค้าไป Cart
   const handleAddToCart = async (id) => {
     try {
       await axios.post(
@@ -102,21 +106,21 @@ const Products = () => {
     }
   };
 
-  // เริ่มแก้ไข
+  // 📌 เริ่มแก้ไข
   const startEdit = (product) => {
     setEditId(product.id);
     setEditName(product.name);
     setEditPrice(product.price);
   };
 
-  // ยกเลิกแก้ไข
+  // 📌 ยกเลิกแก้ไข
   const cancelEdit = () => {
     setEditId(null);
     setEditName("");
     setEditPrice("");
   };
 
-  // บันทึกการแก้ไข
+  // 📌 บันทึกการแก้ไข
   const handleUpdate = async (id) => {
     try {
       await axios.put(
@@ -187,10 +191,7 @@ const Products = () => {
                     onChange={(e) => setEditPrice(e.target.value)}
                   />
                   <button onClick={() => handleUpdate(p.id)}>Save</button>
-                  <button
-                    onClick={cancelEdit}
-                    style={{ marginLeft: "0.5rem" }}
-                  >
+                  <button onClick={cancelEdit} style={{ marginLeft: "0.5rem" }}>
                     Cancel
                   </button>
                 </>

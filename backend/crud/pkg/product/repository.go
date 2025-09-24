@@ -1,10 +1,10 @@
 package product
 
 import (
-	"crud/pkg/transaction"
+	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type ProductRepository interface {
@@ -16,84 +16,139 @@ type ProductRepository interface {
 }
 
 type productRepository struct {
-	db *gorm.DB
+	db *sql.DB
 }
 
-func NewProductRepository(db *gorm.DB) ProductRepository {
+func NewProductRepository(db *sql.DB) ProductRepository {
 	return &productRepository{db: db}
 }
 
-// ✅ Create with transaction
 func (r *productRepository) Create(product *Product) (err error) {
-	t, err := transaction.Begin(r.db)
+	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err != nil {
-			t.Rollback()
+			tx.Rollback()
 		}
 	}()
+	result, errrs := tx.Exec(`INSERT INTO products (name, price) VALUES ($1 , $2 )`,
+		product.Name, product.Price,
+	)
 
-	if err = t.DB().Create(product).Error; err != nil {
+	if errrs != nil {
 		return err
 	}
 
-	return t.Commit()
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		err = fmt.Errorf("no product found ")
+		return err
+	}
+	return tx.Commit()
+
 }
 
-// ✅ GetAll (read-only ไม่ต้องใช้ transaction)
 func (r *productRepository) GetAll() ([]Product, error) {
-	var products []Product
-	if err := r.db.Find(&products).Error; err != nil {
+	tx, err := r.db.Begin()
+	if err != nil {
 		return nil, err
 	}
-	return products, nil
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	rows, err := tx.Query(`SELECT id , name  , price , created_at , updated_at FROM products;`)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var product []Product
+	for rows.Next() {
+		var p Product
+		err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.CreatedAt, &p.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		product = append(product, p)
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return product, nil
 }
 
-// ✅ GetByID (read-only)
 func (r *productRepository) GetByID(id uuid.UUID) (*Product, error) {
-	var product Product
-	if err := r.db.First(&product, "id = ?", id).Error; err != nil {
+	tx, err := r.db.Begin()
+	if err != nil {
 		return nil, err
 	}
-	return &product, nil
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	var p Product
+	row := tx.QueryRow(`SELECT id , name  , price , created_at , updated_at FROM products WHERE id = $1;`, id)
+	err = row.Scan(&p.ID, &p.Name, &p.Price, &p.CreatedAt, &p.UpdatedAt)
+	if err != nil {
+		return &Product{}, err
+	}
+	return &p, nil
 }
 
-// ✅ Update with transaction
 func (r *productRepository) Update(product *Product) (err error) {
-	t, err := transaction.Begin(r.db)
+	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err != nil {
-			t.Rollback()
+			tx.Rollback()
 		}
 	}()
-
-	if err = t.DB().Save(product).Error; err != nil {
+	result, errrs := tx.Exec(`UPDATE products SET name = $1 , price = $2 , created_at = NOW() , updated_at = NOW() WHERE id = $3;`,
+		product.Name, product.Price, product.ID,
+	)
+	if errrs != nil {
 		return err
 	}
 
-	return t.Commit()
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		err = fmt.Errorf("no product found ")
+		return err
+	}
+
+	return tx.Commit()
 }
 
-// ✅ Delete with transaction
 func (r *productRepository) Delete(id uuid.UUID) (err error) {
-	t, err := transaction.Begin(r.db)
+	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err != nil {
-			t.Rollback()
+			tx.Rollback()
 		}
 	}()
+	result, errrs := tx.Exec(`UPDATE products SET deleted_at = NOW() WHERE id = $1;`, id)
 
-	if err = t.DB().Delete(&Product{}, "id = ?", id).Error; err != nil {
+	if errrs != nil {
 		return err
 	}
 
-	return t.Commit()
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		err = fmt.Errorf("no product found ")
+		return err
+	}
+
+	return tx.Commit()
 }
